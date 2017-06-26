@@ -17,12 +17,10 @@ int main(int argc, char *argv[])
     rightImage = imread("/lhome/luqman/Work/stereo_tutorial/images/rightImg.png");
     Mat leftGrayImg, rightGrayImg;
 
+    //To convert from channel 3 to channel 1
     cvtColor(leftImage,leftGrayImg,COLOR_BGR2GRAY);
     cvtColor(rightImage,rightGrayImg,COLOR_BGR2GRAY);
-    imshow("point_cloud_filename.png", leftGrayImg);
-    cvWaitKey();
 
-    std::cout <<"The type of input images "<<leftGrayImg.type()<<std::endl;
     // Left camera intrinsics
     cv::Mat intrinLeft = cv::Mat(3,3,CV_64F);
     intrinLeft.at<double>(0,0) = 721.54;
@@ -67,36 +65,44 @@ int main(int argc, char *argv[])
 
     int ndisparities = 16*5;
     int SADWindowSize = 21;
+    cv::Mat disparityMat, disparityMat8;
+    //CLass for computing stereo correspondence by Block Matching Algorithm
 
-    StereoBM bm(StereoBM::BASIC_PRESET, 32, 9);
-
+    StereoBM bm(StereoBM::BASIC_PRESET, ndisparities, SADWindowSize);
     bm.state->preFilterType = CV_STEREO_BM_XSOBEL;
-
     bm.state->preFilterCap = 63;
-
-    bm.state->SADWindowSize = 11;
-
-    bm.state->minDisparity = 0;
-
-    bm.state->numberOfDisparities = 32;
-
-    bm.state->textureThreshold = 3;
-
-    bm.state->uniquenessRatio = 3;
-
-    bm.state->speckleWindowSize = 20;
-
-    bm.state->speckleRange = 32;
-
+    bm.state->SADWindowSize = 9;
+    bm.state->minDisparity = -50;
+    bm.state->numberOfDisparities = 192;
+    bm.state->textureThreshold = 56;
+    bm.state->uniquenessRatio = 2;
+    bm.state->speckleWindowSize = 10;
+    bm.state->speckleRange = 16;
     bm.state->disp12MaxDiff = 1;
 
-    cv::Mat disparityMat;
-
     bm(leftGrayImg, rightGrayImg, disparityMat);
-
-    imshow("point_cloud_filename.png", disparityMat);
+    normalize(disparityMat, disparityMat8, 0, 255, CV_MINMAX, CV_8U);
+    imshow("point_cloud_filename.png", disparityMat8);
     cvWaitKey();
 
+    //**CLass for computing stereo correspondence by Semi Block Matching Algorithm
+/*
+    StereoBM sbm;
+    sbm.state->SADWindowSize = 9;
+    sbm.state->numberOfDisparities = 112;
+    sbm.state->preFilterSize = 5;
+    sbm.state->preFilterCap = 61;
+    sbm.state->minDisparity = -39;
+    sbm.state->textureThreshold = 507;
+    sbm.state->uniquenessRatio = 0;
+    sbm.state->speckleWindowSize = 0;
+    sbm.state->speckleRange = 8;
+    sbm.state->disp12MaxDiff = 1;
+    sbm(leftGrayImg, rightGrayImg, disparityMat);
+    normalize(disparityMat, disparityMat8, 0, 255, CV_MINMAX, CV_8U);
+    imshow("point_cloud_filename.png", disparityMat8);
+    cvWaitKey();
+*/
 //    Mat xyz;
 //    reprojectImageTo3D(disparityMat, xyz, Q, false, CV_32F);
 
