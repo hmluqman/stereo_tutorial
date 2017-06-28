@@ -17,14 +17,11 @@ int main()
     leftImage = imread("/lhome/luqman/Work/stereo_tutorial/images/leftImg.png");
     rightImage = imread("/lhome/luqman/Work/stereo_tutorial/images/rightImg.png");
     Mat leftGrayImg, rightGrayImg;
-//    std::cout <<"The type of input images "<<leftImage.type()<<std::endl;
 
-//    cvtColor(leftImage,leftGrayImg,COLOR_BGR2GRAY);
-//    cvtColor(rightImage,rightGrayImg,COLOR_BGR2GRAY);
-//    imshow("point_cloud_filename.png", leftGrayImg);
-//    cvWaitKey();
+    //To convert from channel 3 to channel 1
+    cvtColor(leftImage,leftGrayImg,COLOR_BGR2GRAY);
+    cvtColor(rightImage,rightGrayImg,COLOR_BGR2GRAY);
 
-//    std::cout <<"The type of input images "<<leftGrayImg.type()<<std::endl;
     // Left camera intrinsics
     cv::Mat intrinLeft = cv::Mat(3,3,CV_64F);
     intrinLeft.at<double>(0,0) = 643.6696894899887;
@@ -65,6 +62,8 @@ int main()
     distorRight.at<double>(3,0) = 0.0003865393687439495;
     distorRight.at<double>(4,0) = 0.0;
 
+    cv::Mat rotMat = cv::Mat(3,3,CV_64F);
+    /*
     double roll = -1.639, pitch = -0.005, yaw = -1.597;
     cv::Mat rollMat = cv::Mat(3,3,CV_64F);
     rollMat.at<double>(0,0) = cos(roll);
@@ -98,8 +97,8 @@ int main()
     pitchMat.at<double>(2,0) = 0.0;
     pitchMat.at<double>(2,1) = -sin(pitch);
     pitchMat.at<double>(2,2) = cos(pitch);
+    */
 
-    cv::Mat rotMat = cv::Mat(3,3,CV_64F);
     rotMat.at<double>(0,0) = 1.00;
     rotMat.at<double>(0,1) = 0.0;
     rotMat.at<double>(0,2) = 0.0;
@@ -111,26 +110,23 @@ int main()
     rotMat.at<double>(2,2) = 1.0;
     //rotMat = rollMat * yawMat * pitchMat;
 
-
-
     cv::Mat translationMat = cv::Mat(3,1,CV_64F);
     translationMat.at<double>(0,0) = 153.50167013008075/646.5493349750983; // -1.380//
-    translationMat.at<double>(1,0) = 0.007;
-    translationMat.at<double>(2,0) = 0.002;
+    translationMat.at<double>(1,0) = 0.00;
+    translationMat.at<double>(2,0) = 0.00;
 
     cv::Size imgSize = leftImage.size();
-
     cv::Mat oRotleft, oRotRight, projLeft, projRight, Q;
-//    int flags = 0; double alpha=-1;
-//    cv::Rect roi1, roi2;
 
-    cv::stereoRectify(intrinLeft, distorLeft, intrinRight, distorRight,
-                   imgSize, rotMat, translationMat, oRotleft, oRotRight, projLeft, projRight,
-                   Q, 0, -1,imgSize);
+    cv::stereoRectify(intrinLeft, distorLeft, intrinRight, distorRight,imgSize, rotMat,
+                      translationMat, oRotleft, oRotRight, projLeft, projRight, Q, 0, -1,imgSize);
 
     cv::Mat map11, map12, map21, map22;
-    cv::initUndistortRectifyMap(intrinLeft, distorLeft, oRotleft, projLeft, imgSize, CV_16SC2, map11, map12);
-    cv::initUndistortRectifyMap(intrinRight, distorRight, oRotRight, projRight, imgSize, CV_16SC2, map21, map22);
+    cv::initUndistortRectifyMap(intrinLeft, distorLeft, oRotleft, projLeft,
+                                imgSize, CV_16SC2, map11, map12);
+
+    cv::initUndistortRectifyMap(intrinRight, distorRight, oRotRight, projRight,
+                                imgSize, CV_16SC2, map21, map22);
 
     cv::Mat img1r, img2r;
     cv::remap(leftImage, img1r, map11, map12, cv::INTER_LINEAR);
@@ -139,27 +135,17 @@ int main()
     imshow("point_cloud_filename.png", img2r);
     cvWaitKey();
 
-
     StereoBM bm(StereoBM::BASIC_PRESET, 16, 9);
 
     bm.state->preFilterType = CV_STEREO_BM_XSOBEL;
-
     bm.state->preFilterCap = 63;
-
     bm.state->SADWindowSize = 9;
-
-    bm.state->minDisparity = 0;
-
-    bm.state->numberOfDisparities = 16;
-
-    bm.state->textureThreshold = 3;
-
-    bm.state->uniquenessRatio = 3;
-
-    bm.state->speckleWindowSize = 20;
-
-    bm.state->speckleRange = 32;
-
+    bm.state->minDisparity = -50;
+    bm.state->numberOfDisparities = 112;
+    bm.state->textureThreshold = 56;
+    bm.state->uniquenessRatio = 2;
+    bm.state->speckleWindowSize = 10;
+    bm.state->speckleRange = 16;
     bm.state->disp12MaxDiff = 1;
 
     cv::Mat disparityMat;
