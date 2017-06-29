@@ -10,54 +10,47 @@
 using namespace cv;
 using namespace std;
 
-void stereoRectification()
-{
+cv::Mat disparityMat, disparityMat8;
+Mat threeDEnvironment;
 
+void disparityEvent(int evt, int x, int y, int flags, void*)
+{
+   // evt==CV_EVENT_MOUSEMOVE;
+//    cout<<"Disparity Value: "<<disparityMat.at<short>(y,x)/16<<std::endl;
+    cout<<"Disparity Value: "<<disparityMat.at<float>(y,x)<<std::endl;
 }
 
-void semiBlockMatching(const cv::Mat& leftImage, const cv::Mat& rightImage, cv::Mat& disparity)
+void environmentEvent(int evt, int x, int y, int flags, void*)
 {
-    cv::StereoSGBM sgbm;
-    sgbm.SADWindowSize = 11;
-    sgbm.numberOfDisparities = 16*10;
-    sgbm.preFilterCap = 63;
-    sgbm.minDisparity = -90;
-    sgbm.uniquenessRatio = 5;
-    sgbm.speckleWindowSize = 10;
-    sgbm.speckleRange = 10;
-    sgbm.disp12MaxDiff = 1;
-    sgbm.fullDP = false;
-    sgbm.P1 = 600;
-    sgbm.P2 = 2400;
-    sgbm(leftImage, rightImage, disparity);
+   // evt==CV_EVENT_MOUSEMOVE;
+    cout<<"Environment Value: "<<threeDEnvironment.at<cv::Vec3f>(y,x)<<std::endl;
 }
 
 void blockMatching(const cv::Mat& leftImage, const cv::Mat& rightImage, cv::Mat& disparity)
 {
+//    StereoBM bm(StereoBM::BASIC_PRESET, 16, 9);
+
     StereoBM bm(StereoBM::BASIC_PRESET, 16, 9);
     bm.state->preFilterType = CV_STEREO_BM_XSOBEL;
-    bm.state->preFilterCap = 63;
+    //bm.state->preFilterType = CV_STEREO_BM_NORMALIZED_RESPONSE;
+    bm.state->preFilterCap = 31;
     bm.state->SADWindowSize = 11;
-    bm.state->minDisparity = -90;
-    bm.state->numberOfDisparities = 16*10;
-    bm.state->textureThreshold = 256;
-    bm.state->uniquenessRatio = 5;
-    bm.state->speckleWindowSize = 10;
-    bm.state->speckleRange = 10;
+    bm.state->minDisparity = -10;       //default is zero
+    bm.state->numberOfDisparities = 16*8;//default is 64
+    bm.state->textureThreshold = 6;
+    bm.state->uniquenessRatio = 3;
+    bm.state->speckleWindowSize = 8;
+    bm.state->speckleRange = 32;
     bm.state->disp12MaxDiff = 1;
-    bm(leftImage, rightImage, disparity);
+    bm(leftImage, rightImage, disparity, CV_32F);
 }
 
 int main()
 {
+    bool isBlockmatching = true;
     Mat leftImage, rightImage;
     leftImage = imread("/lhome/luqman/Work/stereo_tutorial/images/leftImg.png");
     rightImage = imread("/lhome/luqman/Work/stereo_tutorial/images/rightImg.png");
-    Mat leftGrayImg, rightGrayImg;
-
-    //To convert from channel 3 to channel 1
-    cvtColor(leftImage,leftGrayImg,COLOR_BGR2GRAY);
-    cvtColor(rightImage,rightGrayImg,COLOR_BGR2GRAY);
 
     // Left camera intrinsics
     cv::Mat leftCameraMat = cv::Mat(3,3,CV_64F);
@@ -107,46 +100,44 @@ int main()
     translationMat.at<double>(2,0) = 0.00;
 
     cv::Size imgSize = leftImage.size();
-    cv::Mat oRectTransleft, oRectTransRight, oRectProjMatLeft, oRectProjMatRight;
-    cv::Mat oDispToDepthMapp;
+    cv::Mat RectTransleft, RectTransRight, RectProjMatLeft, RectProjMatRight;
+    cv::Mat DispToDepthMapp;
 
     cv::stereoRectify(leftCameraMat, distorLeft, rightCameraMat, distorRight,imgSize, rotMat,
-                      translationMat, oRectTransleft, oRectTransRight, oRectProjMatLeft,
-                      oRectProjMatRight, oDispToDepthMapp, 0, -1,imgSize);
+                      translationMat, RectTransleft, RectTransRight, RectProjMatLeft,
+                      RectProjMatRight, DispToDepthMapp, CV_CALIB_ZERO_DISPARITY);
 
     cv::Mat mapLeft1, mapLeft2, mapRight1, mapRight2;
-    cv::initUndistortRectifyMap(leftCameraMat, distorLeft, oRectTransleft, oRectProjMatLeft,
+    cv::initUndistortRectifyMap(leftCameraMat, distorLeft, RectTransleft, RectProjMatLeft,
                                 imgSize, CV_16SC2, mapLeft1, mapLeft2);
 
-    cv::initUndistortRectifyMap(rightCameraMat, distorRight, oRectTransRight, oRectProjMatRight,
+    cv::initUndistortRectifyMap(rightCameraMat, distorRight, RectTransRight, RectProjMatRight,
                                 imgSize, CV_16SC2, mapRight1, mapRight2);
 
     cv::Mat leftImgRectified, rightImgRectified;
     cv::remap(leftImage, leftImgRectified, mapLeft1, mapLeft2, cv::INTER_LINEAR);
     cv::remap(rightImage, rightImgRectified, mapRight1, mapRight2, cv::INTER_LINEAR);
-    cv::Mat leftGrayRectImg, rightGrayRectImg;
 
+    cv::Mat leftGrayRectImg, rightGrayRectImg;
     //To convert from channel 3 to channel 1
     cvtColor(leftImgRectified,leftGrayRectImg,COLOR_BGR2GRAY);
     cvtColor(rightImgRectified,rightGrayRectImg,COLOR_BGR2GRAY);
-    cv::Mat disparityMat, disparityMat8;
+    //cv::Mat disparityMat, disparityMat8;
 
     blockMatching(leftGrayRectImg, rightGrayRectImg, disparityMat);
-    imshow("Block Matching Stereo Correspondence", disparityMat);
-    cvWaitKey();
-
-    semiBlockMatching(leftGrayRectImg, rightGrayRectImg, disparityMat);
-    imshow("Semi Block Matching Stereo Correspondence", disparityMat);
-    cvWaitKey();
+    imshow("Block_Matching", disparityMat);
+    cvSetMouseCallback("Block_Matching",  disparityEvent, 0);
+    cvWaitKey(0);
 
     normalize(disparityMat, disparityMat8, 0, 255, CV_MINMAX, CV_8U);
-//    imshow("Normalized Disparity", disparityMat8);
-//    cvWaitKey();
+    imshow("Normalized Disparity", disparityMat8);
+   // cvSetMouseCallback("Normalized Disparity",  mouseEvent, 0);
+    cvWaitKey(0);
 
-    Mat xyz;
-    reprojectImageTo3D(disparityMat, xyz, oDispToDepthMapp, false, CV_32F);
-    imshow("point_cloud_filename.png", xyz);
+    reprojectImageTo3D(disparityMat, threeDEnvironment, DispToDepthMapp, true, CV_32F);
+    imshow("point_cloud", threeDEnvironment);
+  //  cvSetMouseCallback("point_cloud", environmentEvent, 0);
     cvWaitKey();
-
+    std::cout << "Size of 3D vironment "<<threeDEnvironment.at<cv::Vec3f>(240,325);
 
 }
