@@ -15,14 +15,12 @@ Mat threeDEnvironment;
 
 void disparityEvent(int evt, int x, int y, int flags, void*)
 {
-
 //    cout<<"Disparity Value: "<<disparityMat.at<short>(y,x)/16<<std::endl;
     cout<<"Disparity Value: "<<disparityMat.at<float>(y,x)<<std::endl;
 }
 
 void environmentEvent(int evt, int x, int y, int flags, void*)
 {
-
     cout<<"Environment Value: "<<threeDEnvironment.at<cv::Vec3f>(y,x)<<std::endl;
 }
 
