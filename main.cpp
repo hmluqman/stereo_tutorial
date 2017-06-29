@@ -9,9 +9,24 @@
 using namespace cv;
 using namespace std;
 
+cv::Mat disparityMat, disparityMat8;
+Mat threeDEnvironment;
+
+void disparityEvent(int evt, int x, int y, int flags, void*)
+{
+    cout<<"X cordinate: "<< x << " Y Cordinate " << y << std::endl;
+    cout<<"Disparity Value: "<<disparityMat.at<short>(y,x)/16<<std::endl;
+
+    //   cout<<"Disparity Value: "<<disparityMat.at<float>(y,x)<<std::endl;
+}
+
+void environmentEvent(int evt, int x, int y, int flags, void*)
+{
+    cout<<"Environment Value: "<<threeDEnvironment.at<cv::Vec3f>(y,x)<<std::endl;
+}
+
 int main(int argc, char *argv[])
 {
-
     Mat leftImage, rightImage;
     leftImage = imread("/lhome/luqman/Work/stereo_tutorial/images/leftImg.png");
     rightImage = imread("/lhome/luqman/Work/stereo_tutorial/images/rightImg.png");
@@ -20,7 +35,7 @@ int main(int argc, char *argv[])
     //To convert from channel 3 to channel 1
     cvtColor(leftImage,leftGrayImg,COLOR_BGR2GRAY);
     cvtColor(rightImage,rightGrayImg,COLOR_BGR2GRAY);
-
+    cout<<"Size of Image "<<leftGrayImg.size()<<endl;
     // Left camera intrinsics
     cv::Mat intrinLeft = cv::Mat(3,3,CV_64F);
     intrinLeft.at<double>(0,0) = 721.54;
@@ -69,16 +84,7 @@ int main(int argc, char *argv[])
     cameraMatrix2.at<double>(2,1) = 0.000000e+00;
     cameraMatrix2.at<double>(2,2) = 1.000000e+00;
 
-    cv::Mat rotMat = cv::Mat(3,3,CV_64F);
-    rotMat.at<double>(0,0) = 1.00;
-    rotMat.at<double>(0,1) = 0.0;
-    rotMat.at<double>(0,2) = 0.0;
-    rotMat.at<double>(1,0) = 0.0;
-    rotMat.at<double>(1,1) = 1.0;
-    rotMat.at<double>(1,2) = 0.0;
-    rotMat.at<double>(2,0) = 0.0;
-    rotMat.at<double>(2,1) = 0.0;
-    rotMat.at<double>(2,2) = 1.0;
+    cv::Mat rotMat = cv::Mat::eye(3,3,CV_64F);
 
     cv::Mat translationMat = cv::Mat(3,1,CV_64F);
     translationMat.at<double>(0,0) = 387.57/721.54;
@@ -101,59 +107,55 @@ int main(int argc, char *argv[])
     distorRight.at<double>(3,0) = -6.298563e-04;
     distorRight.at<double>(4,0) = -5.314062e-02;
 
-
     cv::Size imgSize = leftImage.size();
 
     cv::Mat R1, R2, P1, P2, Q;
     // Calculation of stereo rectify transform
     cv::stereoRectify(cameraMatrix1, distorLeft, cameraMatrix2, distorRight, imgSize, rotMat,
-                      translationMat, R1, R2, P1, P2, Q);
+                      translationMat, R1, R2, P1, P2, Q, CV_CALIB_ZERO_DISPARITY);
 
     int ndisparities = 16*5;
     int SADWindowSize = 21;
-    cv::Mat disparityMat, disparityMat8;
 
     //CLass for computing stereo correspondence by Block Matching Algorithm
 
     StereoBM bm(StereoBM::BASIC_PRESET, ndisparities, SADWindowSize);
     bm.state->preFilterType = CV_STEREO_BM_XSOBEL;
-    bm.state->preFilterCap = 63;
+    bm.state->preFilterCap = 32;
     bm.state->SADWindowSize = 9;
-    bm.state->minDisparity = -50;
-    bm.state->numberOfDisparities = 192;
-    bm.state->textureThreshold = 56;
+    bm.state->minDisparity = -29;
+    bm.state->numberOfDisparities = 96;
+    bm.state->textureThreshold = 8;
     bm.state->uniquenessRatio = 2;
     bm.state->speckleWindowSize = 10;
     bm.state->speckleRange = 16;
     bm.state->disp12MaxDiff = 1;
-
     bm(leftGrayImg, rightGrayImg, disparityMat);
     normalize(disparityMat, disparityMat8, 0, 255, CV_MINMAX, CV_8U);
-    imshow("point_cloud_filename.png", disparityMat8);
-    cvWaitKey();
-    cv::Mat _3dImage;
-    cv::reprojectImageTo3D(disparityMat,_3dImage, Q, true);
-    imshow("Depth map", _3dImage);
-    cvWaitKey();
-    //**CLass for computing stereo correspondence by Semi Block Matching Algorithm
-/*
+    imshow("point_cloud", disparityMat);
+
+    /*
     StereoBM sbm;
     sbm.state->SADWindowSize = 9;
     sbm.state->numberOfDisparities = 112;
     sbm.state->preFilterSize = 5;
     sbm.state->preFilterCap = 61;
-    sbm.state->minDisparity = -39;
-    sbm.state->textureThreshold = 507;
-    sbm.state->uniquenessRatio = 0;
-    sbm.state->speckleWindowSize = 0;
+    sbm.state->minDisparity = -29;
+    sbm.state->textureThreshold = 95;
+    sbm.state->uniquenessRatio = 1;
+    sbm.state->speckleWindowSize = 15;
     sbm.state->speckleRange = 8;
     sbm.state->disp12MaxDiff = 1;
     sbm(leftGrayImg, rightGrayImg, disparityMat);
     normalize(disparityMat, disparityMat8, 0, 255, CV_MINMAX, CV_8U);
-    imshow("point_cloud_filename.png", disparityMat8);
+    imshow("point_cloud", disparityMat);
+    */
+    cvSetMouseCallback("point_cloud", disparityEvent, 0);
     cvWaitKey();
-*/
-//    Mat xyz;
-//    reprojectImageTo3D(disparityMat, xyz, Q, false, CV_32F);
+
+    reprojectImageTo3D(disparityMat, threeDEnvironment, Q, true, CV_32F);
+    imshow("ThreeDEnvironement", threeDEnvironment);
+    cvSetMouseCallback("ThreeDEnvironement", environmentEvent, 0);
+    cvWaitKey();
 
 }
