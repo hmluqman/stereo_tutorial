@@ -17,11 +17,12 @@ void disparityEvent(int evt, int x, int y, int flags, void*)
     cout<<"X cordinate: "<< x << " Y Cordinate " << y << std::endl;
     cout<<"Disparity Value: "<<disparityMat.at<short>(y,x)/16<<std::endl;
 
-    //   cout<<"Disparity Value: "<<disparityMat.at<float>(y,x)<<std::endl;
+    //cout<<"Disparity Value: "<<disparityMat.at<float>(y,x)<<std::endl;
 }
 
 void environmentEvent(int evt, int x, int y, int flags, void*)
 {
+    cout<<"X cordinate: "<< x << " Y Cordinate " << y << std::endl;
     cout<<"Environment Value: "<<threeDEnvironment.at<cv::Vec3f>(y,x)<<std::endl;
 }
 
@@ -122,13 +123,13 @@ int main(int argc, char *argv[])
     StereoBM bm(StereoBM::BASIC_PRESET, ndisparities, SADWindowSize);
     bm.state->preFilterType = CV_STEREO_BM_XSOBEL;
     bm.state->preFilterCap = 32;
-    bm.state->SADWindowSize = 9;
+    bm.state->SADWindowSize = 15;// Could be 5x5.....21x21
     bm.state->minDisparity = -29;
     bm.state->numberOfDisparities = 96;
-    bm.state->textureThreshold = 8;
+    bm.state->textureThreshold = 12;//Default value is 12
     bm.state->uniquenessRatio = 2;
     bm.state->speckleWindowSize = 10;
-    bm.state->speckleRange = 16;
+    bm.state->speckleRange = 12;
     bm.state->disp12MaxDiff = 1;
     bm(leftGrayImg, rightGrayImg, disparityMat);
     normalize(disparityMat, disparityMat8, 0, 255, CV_MINMAX, CV_8U);
