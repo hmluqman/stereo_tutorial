@@ -10,7 +10,7 @@ using namespace cv;
 using namespace std;
 
 cv::Mat disparityMat, disparityMat8;
-Mat threeDEnvironment;
+Mat out3D;
 
 void disparityEvent(int evt, int x, int y, int flags, void*)
 {
@@ -23,7 +23,7 @@ void disparityEvent(int evt, int x, int y, int flags, void*)
 void environmentEvent(int evt, int x, int y, int flags, void*)
 {
     cout<<"X cordinate: "<< x << " Y Cordinate " << y << std::endl;
-    cout<<"Environment Value: "<<threeDEnvironment.at<cv::Vec3f>(y,x)<<std::endl;
+    cout<<"Environment Value: "<<out3D.at<cv::Vec3f>(y,x)<<std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -110,10 +110,10 @@ int main(int argc, char *argv[])
 
     cv::Size imgSize = leftImage.size();
 
-    cv::Mat R1, R2, P1, P2, Q;
+    cv::Mat R1, R2, P1, P2, reProjectionMat;
     // Calculation of stereo rectify transform
     cv::stereoRectify(cameraMatrix1, distorLeft, cameraMatrix2, distorRight, imgSize, rotMat,
-                      translationMat, R1, R2, P1, P2, Q, CV_CALIB_ZERO_DISPARITY);
+                      translationMat, R1, R2, P1, P2, reProjectionMat, CV_CALIB_ZERO_DISPARITY);
 
     int ndisparities = 16*5;
     int SADWindowSize = 21;
@@ -131,32 +131,33 @@ int main(int argc, char *argv[])
     bm.state->speckleWindowSize = 10;
     bm.state->speckleRange = 12;
     bm.state->disp12MaxDiff = 1;
-    bm(leftGrayImg, rightGrayImg, disparityMat);
+    bm(leftGrayImg, rightGrayImg, disparityMat, CV_32F);
     normalize(disparityMat, disparityMat8, 0, 255, CV_MINMAX, CV_8U);
     imshow("point_cloud", disparityMat);
 
-    /*
-    StereoBM sbm;
-    sbm.state->SADWindowSize = 9;
-    sbm.state->numberOfDisparities = 112;
-    sbm.state->preFilterSize = 5;
-    sbm.state->preFilterCap = 61;
-    sbm.state->minDisparity = -29;
-    sbm.state->textureThreshold = 95;
-    sbm.state->uniquenessRatio = 1;
-    sbm.state->speckleWindowSize = 15;
-    sbm.state->speckleRange = 8;
-    sbm.state->disp12MaxDiff = 1;
-    sbm(leftGrayImg, rightGrayImg, disparityMat);
-    normalize(disparityMat, disparityMat8, 0, 255, CV_MINMAX, CV_8U);
-    imshow("point_cloud", disparityMat);
-    */
     cvSetMouseCallback("point_cloud", disparityEvent, 0);
     cvWaitKey();
+    reProjectionMat.convertTo(reProjectionMat, CV_32F);
 
-    reprojectImageTo3D(disparityMat, threeDEnvironment, Q, true, CV_32F);
-    imshow("ThreeDEnvironement", threeDEnvironment);
+    for(size_t i = 0; i < reProjectionMat.rows ; i++)
+    {
+        std::cout << "Values of Q in "<<i<<" row ";
+        for(size_t j = 0; j < reProjectionMat.cols ; j++)
+        {
+            std::cout<<" "<<reProjectionMat.at<float>(i,j)<<" ";
+        }
+        std::cout<<endl;
+    }
+
+    CV_Assert(disparityMat.type() == CV_32F && !disparityMat.empty());
+    std::cout << "Size of Q "<<reProjectionMat.size()<<endl <<"Type of Q "<<reProjectionMat.type()<<endl;
+    CV_Assert(reProjectionMat.type() == CV_32F && reProjectionMat.cols == 4 && reProjectionMat.rows == 4);
+
+    // 3-channel matrix for containing the reprojected 3D world coordinates
+    out3D = cv::Mat::zeros(disparityMat.size(), CV_32F);
+
+    reprojectImageTo3D(disparityMat, out3D, reProjectionMat, true);
+    imshow("ThreeDEnvironement", out3D);
     cvSetMouseCallback("ThreeDEnvironement", environmentEvent, 0);
     cvWaitKey();
-
 }
