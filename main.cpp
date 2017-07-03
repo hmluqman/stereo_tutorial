@@ -10,7 +10,6 @@ using namespace cv;
 using namespace std;
 
 cv::Mat disparityMat, disparityMat8;
-Mat out3D;
 
 void disparityEvent(int evt, int x, int y, int flags, void*)
 {
@@ -20,10 +19,12 @@ void disparityEvent(int evt, int x, int y, int flags, void*)
     //cout<<"Disparity Value: "<<disparityMat.at<float>(y,x)<<std::endl;
 }
 
-void environmentEvent(int evt, int x, int y, int flags, void*)
+void environmentEvent(int evt, int x, int y, int flags, void* param)
 {
+    Mat* rgb = (Mat*) param;
     cout<<"X cordinate: "<< x << " Y Cordinate " << y << std::endl;
-    cout<<"Environment Value: "<<out3D.at<cv::Vec3f>(y,x)<<std::endl;
+    //cout<<"Environment Value: "<< out3D.at<cv::Vec3f>(y,x)<<std::endl;
+    cout<<"Environment Value: "<< (*rgb).at<cv::Vec3f>(y,x)<<std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -155,10 +156,11 @@ int main(int argc, char *argv[])
     CV_Assert(reProjectionMat.type() == CV_32F && reProjectionMat.cols == 4 && reProjectionMat.rows == 4);
 
     // 3-channel matrix for containing the reprojected 3D world coordinates
+    Mat out3D;
     out3D = cv::Mat::zeros(disparityMat.size(), CV_32F);
 
     reprojectImageTo3D(disparityMat, out3D, reProjectionMat, true);
     imshow("ThreeDEnvironement", out3D);
-    cvSetMouseCallback("ThreeDEnvironement", environmentEvent, 0);
+    cvSetMouseCallback("ThreeDEnvironement", environmentEvent, &out3D);
     cvWaitKey();
 }
