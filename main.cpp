@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
     cvtColor(leftImage,leftGrayImg,COLOR_BGR2GRAY);
     cvtColor(rightImage,rightGrayImg,COLOR_BGR2GRAY);
     cout<<"Size of Image "<<leftGrayImg.size()<<endl;
+    /*
     // Left camera intrinsics
     cv::Mat intrinLeft = cv::Mat(3,3,CV_64F);
     intrinLeft.at<double>(0,0) = 721.54;
@@ -60,7 +61,7 @@ int main(int argc, char *argv[])
     intrinRight.at<double>(2,0) = 0;
     intrinRight.at<double>(2,1) = 0;
     intrinRight.at<double>(2,2) = 1;
-
+    */
     // Left camera calibration matrix
     cv::Mat cameraMatrix1 = cv::Mat(3,3,CV_64F);
     cameraMatrix1.at<double>(0,0) = 9.842439e+02;
