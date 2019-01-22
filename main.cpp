@@ -30,8 +30,8 @@ void environmentEvent(int evt, int x, int y, int flags, void* param)
 int main(int argc, char *argv[])
 {
     Mat leftImage, rightImage;
-    leftImage = imread("/lhome/luqman/Work/stereo_tutorial/images/leftImg.png");
-    rightImage = imread("/lhome/luqman/Work/stereo_tutorial/images/rightImg.png");
+    leftImage = imread("/home/luqman/Work/stereo_tutorial/images/leftImg.png");
+    rightImage = imread("/home/luqman/Work/stereo_tutorial/images/rightImg.png");
     Mat leftGrayImg, rightGrayImg;
 
     //To convert from channel 3 to channel 1

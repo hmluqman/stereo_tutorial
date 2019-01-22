@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(stereo_tutorial)
 find_package(OpenCV REQUIRED)
+find_package(PCL REQUIRED)
 
 ###########
 ## Build ##
